@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: visualizacion_DataSets
+    env: python
+    buildCommand : ""
+    startCommand : voila 3501/06_Visualizacion_DataSets.ipynb --port=$PORT --no-browser 
+    
