@@ -1,0 +1,242 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Análisis de Archivo ARFF</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 900px;
+            padding: 40px;
+        }
+        .main-card {
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #1a237e; /* Azul profundo */
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .file-upload-section {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .file-upload-section:hover {
+            background-color: #eaf5ff;
+            border-color: #0056b3;
+        }
+        input[type="file"] {
+            display: none; /* Ocultar el input nativo */
+        }
+        .btn-primary-custom {
+            background-color: #007bff;
+            border-color: #007bff;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .btn-primary-custom:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        .results-card {
+            margin-top: 30px;
+            border-radius: 10px;
+            border-left: 5px solid #1a237e;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .stat-icon {
+            color: #007bff;
+            width: 20px;
+        }
+        .accuracy-badge {
+            font-size: 1.1em;
+            font-weight: bold;
+            padding: 8px 15px;
+            border-radius: 8px;
+        }
+        .chart-container {
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-top: 30px;
+        }
+        .table-responsive {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="main-card">
+        <h1><i class="fas fa-chart-bar"></i> Análisis de Archivo ARFF</h1>
+
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+            <strong><i class="fas fa-exclamation-triangle"></i> Error al procesar:</strong> {{ error }}
+            <pre class="mt-2" style="font-size: 0.8em;">{{ traceback }}</pre>
+        </div>
+        {% endif %}
+
+        {% if warning %}
+        <div class="alert alert-warning" role="alert">
+            <strong><i class="fas fa-exclamation-circle"></i> Advertencia:</strong> {{ warning }}
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="mb-5">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="id_file" class="form-label visually-hidden">Subir Archivo ARFF</label>
+                <div class="file-upload-section" onclick="document.getElementById('id_file').click()">
+                    <i class="fas fa-upload fa-3x mb-2" style="color: #007bff;"></i>
+                    <p class="mb-0">Arrastra y suelta tu archivo **.ARFF** aquí o haz clic para seleccionarlo.</p>
+                </div>
+                <input type="file" name="file" id="id_file" accept=".arff" required>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary-custom btn-lg">
+                    <i class="fas fa-cogs"></i> Procesar Archivo
+                </button>
+            </div>
+        </form>
+
+        {% if table_html %}
+        <div class="card results-card">
+            <div class="card-header bg-white">
+                <h4 class="mb-0 text-primary"><i class="fas fa-flask"></i> Resultados del Análisis</h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-database text-info"></i> Resumen de Datos</h5>
+                        <div class="stat-item">
+                            <i class="stat-icon fas fa-list-ol"></i>
+                            <span>**Total de datos:** {{ total_datos }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="stat-icon fas fa-graduation-cap"></i>
+                            <span>**Train:** {{ count_train }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="stat-icon fas fa-check-double"></i>
+                            <span>**Validation:** {{ count_val }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="stat-icon fas fa-vial"></i>
+                            <span>**Test:** {{ count_test }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-chart-line text-success"></i> Precisión (Accuracy)</h5>
+                        <div class="stat-item">
+                            <span>**Validation:**</span>
+                            <span class="badge bg-success accuracy-badge">{{ acc_val|floatformat:2 }}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>**Test:**</span>
+                            <span class="badge bg-primary accuracy-badge">{{ acc_test|floatformat:2 }}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h5><i class="fas fa-table text-secondary"></i> Matriz de Confusión/Detalle</h5>
+                <div class="table-responsive">
+                    {{ table_html|safe }}
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h5 class="text-center mb-3"><i class="fas fa-pie-chart text-danger"></i> Distribución de Clases en el Dataset</h5>
+            <canvas id="classChart"></canvas>
+        </div>
+
+        <script>
+            // Asegúrate de que las variables JSON estén definidas en el contexto de Django
+            const classLabels = JSON.parse('{{ class_labels_json|escapejs }}');
+            const classValues = JSON.parse('{{ class_values_json|escapejs }}');
+
+            // Colores más vibrantes para el gráfico
+            const chartColors = [
+                'rgba(26, 35, 126, 0.7)', // Indigo
+                'rgba(0, 150, 136, 0.7)', // Teal
+                'rgba(255, 160, 0, 0.7)', // Amber
+                'rgba(211, 47, 47, 0.7)', // Red
+                'rgba(103, 58, 183, 0.7)', // Deep Purple
+                'rgba(76, 175, 80, 0.7)' // Green
+            ];
+
+            const ctx = document.getElementById('classChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: classLabels,
+                    datasets: [{
+                        label: 'Frecuencia',
+                        data: classValues,
+                        backgroundColor: chartColors.slice(0, classLabels.length),
+                        borderColor: chartColors.map(color => color.replace('0.7', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: false,
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            precision: 0,
+                            title: {
+                                display: true,
+                                text: 'Número de Instancias'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Clase'
+                            }
+                        }
+                    }
+                }
+            });
+        </script>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>
